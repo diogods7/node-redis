@@ -1,9 +1,11 @@
 import express from "express";
 import { z } from "zod";
 import { emailQueue } from "./queue";
+import { setupBullBoard } from "./dashboard";
 
 const app = express()
 app.use(express.json())
+const serverAdapter = setupBullBoard()
 
 const schema = z.object({
   to: z.email(),
@@ -11,6 +13,11 @@ const schema = z.object({
   body: z.string().min(1),
   requestId: z.string().min(2) 
 })
+
+app.use(
+  "/admin/queues",
+  serverAdapter.getRouter()
+)
 
 app.post("/jobs/email", async (req, res) => {
   const parsed = schema.safeParse(req.body)
@@ -21,7 +28,7 @@ app.post("/jobs/email", async (req, res) => {
 
   const payload = parsed.data
 
-  const jobId = `email:${payload.requestId}`
+  const jobId = `email - ${payload.requestId}`
 
   const job = await emailQueue.add("send-email", payload, {
     jobId
